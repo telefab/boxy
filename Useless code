@@ -1,0 +1,272 @@
+// LA machine
+
+// LES INCLUDES
+#include <Servo.h>
+#include "pitches.h"
+// -----------------------
+
+// Constantes générales
+const int brasHaut = 105;
+const int brasBas = 00;
+const int drapeauHaut = 179;
+const int drapeauBas = 75;
+const int clapetHaut = 0;
+const int clapetBas = 75;
+// -------------------
+
+// Constantes des pins
+const int pinBouton = 8;          // Numéro de la broche à laquelle est connecté le bouton
+const int pinServobras = 9;       // Numéro de la broche à laquelle est connectée le servomoteur du bras
+const int pinMoteurRoues = 5;     // Numéro de la broche à laquelle est connectée le moteur des roues
+const int pinServoDrapeau = 11;   // Numéro de la broche à laquelle est connectée le servomoteur du drapeau
+const int pinBuzzer = 12;         // Numéro de la broche à laquelle est connectée le buzzer
+const int pinLed = 7;             // Numéro de la broche à laquelle est connectée la led
+const int pinServoClapet = 6;     // Numéro de la broche à laquelle est connectée le servomoteur du clapet
+// ------------------
+
+// Déclarations utiles
+Servo servobras;                   // instancie le servo bras
+Servo servoDrapeau;                // instancie le servo drapeau
+Servo servoClapet;
+boolean isUp = 0;                  // etat du bras
+boolean didSmth = 0;
+unsigned long tempsTotal = 0;
+unsigned long tempsDerniereAction = 0;
+// ------------------
+
+void setup() 
+{
+  pinMode(pinBouton, INPUT);                // indique que la broche du bouton est utilisée en entrée
+
+  // S'assure de la position initale du bras
+  servobras.attach(pinServobras);           // attaches the servo on pin "pinServo" to the servo object 
+  servobras.write(brasBas);                 // sets the servo position according to the scaled value 
+  delay(500);                               // waits for the servo to get there
+  // -----------------
+
+  // S'assure de la position initale du drapeau
+  servoDrapeau.attach(pinServoDrapeau);
+  servoDrapeau.write(drapeauBas);          // sets the servo position according to the scaled value 
+  delay(500);                             // waits for the servo to get there
+  // -----------------
+
+  // S'assure de la position initale du clapet
+  servoClapet.attach(pinServoClapet);
+  servoClapet.write(clapetBas);            // sets the servo position according to the scaled value 
+  delay(500);                             // waits for the servo to get there
+  // -----------------
+
+  int etatBouton;
+}
+
+void loop() 
+{
+  tempsTotal = millis();
+  didSmth = 0;
+
+  int etatBouton = digitalRead(pinBouton);   
+  if (etatBouton == HIGH) {                     // Condition sur l'état du bouton
+
+    ListeAction( (int) random(1,4));
+    //Drapeau();
+    servoClapet.write(clapetHaut);
+    delay(250);
+    servobras.write(brasHaut);                  // monte le bras et pousse le bouton 
+    isUp = 1;
+    didSmth = 1;
+
+  } 
+  else {
+
+    if (isUp)
+    {
+      servoDrapeau.write(drapeauBas);
+      servobras.write(brasBas);                 // descend le bras
+      analogWrite(pinLed, 0);
+      analogWrite(pinMoteurRoues, 0);
+      delay(400);
+      servoClapet.write(clapetBas);
+      isUp = 0;
+      didSmth = 1;
+    }
+
+  }
+
+  if (didSmth = 0)
+  {
+    delay(random(100,250));                       // attend une durée aléatoire
+  }
+
+}
+
+// ---------------------------------------------------------------
+// ************ void ActionAleatoire(long val) *******************
+// prend une variable val en entrée qui est utilisée dans le switch
+// pour effectuer l'action correspondante
+// ---------------------------------------------------------------
+void ListeAction(int val)
+{
+  if ((tempsTotal - tempsDerniereAction) > 5000)
+  {  
+    switch (val)
+    {
+    case 1:
+      Drapeau();
+      break;
+    case 2:
+      Musique();
+      break;
+    case 3:
+      PetitsDeplacements();
+      break;
+    case 4:
+      //Feinte();
+      break;
+    default:
+      break;
+    }
+    tempsDerniereAction=millis();
+  }
+}
+
+// ---------------------------------------------------------------
+// *********************** void drapeau() ************************
+// Monte puis descend le drapeau
+// ---------------------------------------------------------------
+void Drapeau()
+{
+  int delai = 1500;
+
+  servoClapet.write(clapetHaut);
+  //delay(500);
+  Clignote(pinLed, 1500, 400);
+
+  servoDrapeau.write(drapeauHaut+20);                  // monte le drapeau
+  delay(1100);
+
+  for(int i=0;i<5 && digitalRead(pinBouton);++i)
+  {
+    servoDrapeau.write(drapeauHaut-20);
+    analogWrite(pinLed, 255);
+    delay(780); 
+    servoDrapeau.write(drapeauHaut+20);
+    analogWrite(pinLed, 0);
+    delay(780);
+  }
+
+  //servoDrapeau.write(drapeauBas);                   // descend le drapeau
+
+  Clignote(pinLed, 1500, 400);
+  //delay(500);
+  //servoClapet.write(clapetBas);
+
+}
+
+void Clignote(int numPinLed, int temps, int intervalle)
+{
+  for(int i = 0; i<temps && digitalRead(pinBouton); i+=(2*intervalle))
+  {
+    analogWrite(numPinLed, 255);
+    delay(intervalle);
+    analogWrite(numPinLed, 0);
+    delay(intervalle);
+  }
+}
+
+// ---------------------------------------------------------------
+// *********************** void musique() ************************
+// Joue de la musique trop swaggalicious !!
+// ---------------------------------------------------------------
+class Note
+{
+public:
+  Note(int note = 0, int duration = 0)
+  {
+    this->note = note;
+    this->duration = duration;
+  }
+
+  int note;
+  int duration;
+
+  boolean isEnd() const
+  {
+    return note == 0 && duration == 0;
+  }
+};
+
+void Musique()
+{
+  float sndSpeed = 1.0f;
+  boolean isOn = 0;
+
+  Note snd[] = 
+  { 
+    Note(NOTE_C3, 8), Note(NOTE_E3, 8), Note(NOTE_G3, 8), Note(NOTE_C4, 8), Note(NOTE_B3, 4), Note(0, 32), Note(NOTE_B3, 8), Note(NOTE_G3, 8),
+    Note(NOTE_A3, 4), Note(0, 32), Note(NOTE_A3, 8), Note(NOTE_F3, 8), Note(NOTE_G3, 2),
+    Note(NOTE_G2, 8), Note(NOTE_B2, 8), Note(NOTE_D3, 8), Note(NOTE_F3, 8), Note(NOTE_E3, 2),
+    Note(NOTE_G2, 8), Note(NOTE_G2, 8), Note(NOTE_G2, 8), Note(NOTE_G2, 8), Note(NOTE_G2, 2), Note(0, 8),
+    Note(NOTE_C3, 8), Note(NOTE_E3, 8), Note(NOTE_G3, 8), Note(NOTE_C4, 8), Note(NOTE_B3, 4), Note(0, 32), Note(NOTE_B3, 8), Note(NOTE_G3, 8),
+    Note(NOTE_A3, 4), Note(0, 32), Note(NOTE_A3, 8), Note(NOTE_F3, 8), Note(NOTE_G3, 2),
+    Note(NOTE_G3, 8), Note(NOTE_A3, 8), Note(0, 32), Note(NOTE_B3, 8), Note(NOTE_C4, 1),
+    Note(NOTE_G3, 4), Note(NOTE_F3, 8), Note(NOTE_G3, 1), Note(NOTE_C3, 4), Note(NOTE_D3, 4), Note(NOTE_E3, 1),
+    Note()    };
+
+  int i = 0;
+  while(!snd[i].isEnd()&&digitalRead(pinBouton))
+  {
+    if (!isOn)
+    {
+      analogWrite(pinLed, 255);
+      isOn=!isOn;
+    } 
+    else {
+      analogWrite(pinLed, 0);
+      isOn=!isOn;
+    }
+    int noteDuration = (int) (sndSpeed * 1000/snd[i].duration);
+    tone(pinBuzzer, snd[i].note, noteDuration);
+
+    int pauseBetweenNotes = noteDuration + (int)(sndSpeed*20.f);
+    delay(pauseBetweenNotes);
+
+    ++i;
+  }
+
+}
+
+// ---------------------------------------------------------------
+// ***************** void PetitsDeplacements() *******************
+// 5 petits déplacements de longueur aléatoire
+// ---------------------------------------------------------------
+
+void PetitsDeplacements()
+{
+  int i;
+  for(i=0; i<10 && digitalRead(pinBouton); i++)
+  {
+    analogWrite(pinMoteurRoues,random(100,255));
+    delay(/*random(700, 1000)*/400);
+  }
+
+  analogWrite(pinMoteurRoues, 0);
+
+}
+
+// ---------------------------------------------------------------
+// *********************** void Feinte() ************************
+// Rigolo inside !!
+// ---------------------------------------------------------------
+void Feinte()
+{
+  int i;
+  servoClapet.write(clapetHaut);
+  delay(600);
+  for(i=0; i<5&&digitalRead(pinBouton); i++)
+  {
+    servobras.write((int) random(10, 80));
+    delay(random(300, 500));
+  }
+
+}
+
